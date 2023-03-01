@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+
+<body>
+    <button id='button-connect' onclick='connect()'>Connect</button>
+    <button id='button-on' disabled onclick='turnOn()'>Turn On</button>
+    <button id='button-off' disabled onclick='turnOff()'>Turn Off</button>
+    <script>
+        let primaryService = '00010203-0405-0607-0809-0a0b0c0d1910';
+        let characteristic = null;
+        let buttonOn = document.querySelector('#button-on');
+        let buttonOff = document.querySelector('#button-off');
+
+        function connect() {
+            navigator.bluetooth.requestDevice({
+                filters: [{
+                    name: 'ihoment_H613B_B098'
+                }],
+                optionalServices: [
+                    primaryService
+                ]
+            })
+                .then(device => { connectToDevice(device); })
+                .catch(error => { console.error(error); });
+        }
+
+        async function connectToDevice(device) {
+            let server = null;
+            let service = null;
+            device.ongattserverdisconnected = (data) => {
+                buttonOff.setAttribute('disabled', true);
+                buttonOn.setAttribute('disabled', true);
+            }
+            server = await device.gatt.connect();
+            await server.connect();
+
+            buttonOff.removeAttribute('disabled');
+            buttonOn.removeAttribute('disabled');
+
+            service = await server.getPrimaryService(primaryService);
+            characteristic = await service.getCharacteristic('00010203-0405-0607-0809-0a0b0c0d2b11');
+        }
+
+        function turnOn() {
+            characteristic.writeValue(commands['turnOn']);
+        }
+
+        function turnOff() {
+            characteristic.writeValue(commands['turnOff']);
+        }
+
+        commands = {
+            'turnOn': convert('3301010000000000000000000000000000000033'),
+            'turnOff': convert('3301000000000000000000000000000000000032'),
+        }
+
+        function convert(string) {
+            return new Uint8Array(
+                string.match(/[\da-f]{2}/gi).map(function (matched) {
+                    return parseInt(matched, 16);
+                })
+            )
+        }
+    </script>
+
+    <style>
+        button {
+            width: 25%;
+            height: 100px;
+            display: inline-block;
+            padding: 0.35em 1.2em;
+            border: 0.1em solid #000000;
+            margin: 0 0.3em 0.3em 0;
+            border-radius: 0.12em;
+            box-sizing: border-box;
+            text-decoration: none;
+            font-size: larger;
+            font-family: 'Roboto', sans-serif;
+            font-weight: 300;
+            color: #FFFFFF;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        button {
+            color: #000000;
+            background-color: #FFFFFF;
+        }
+
+        button:disabled {
+            border-color: lightgray;
+            background-color: lightgray;
+        }
+
+        :hover button:disabled {
+            cursor: not-allowed;
+        }
+
+        @media all and (max-width:30em) {
+            button {
+                display: block;
+                margin: 0.4em auto;
+            }
+        }
+
+    </style>
+
+</body>
+
+</html>
